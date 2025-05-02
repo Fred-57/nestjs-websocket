@@ -10,6 +10,7 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
 
   adminer:
     image: adminer:5.2.1
@@ -18,7 +19,7 @@ services:
       - "8080:8080"
     depends_on:
       - db
-    restart: always
+    restart: unless-stopped
 
 volumes:
   db_data:
