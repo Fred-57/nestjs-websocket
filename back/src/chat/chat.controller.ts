@@ -15,6 +15,7 @@ import { CreateConversationDto } from './dto/create-conversation.dto';
 import { SendChatDto } from './dto/send-chat.dto';
 import { AddReactionDto } from './dto/add-reaction.dto';
 import { RemoveReactionDto } from './dto/remove-reaction.dto';
+import { SendWizzDto } from './dto/send-wizz.dto';
 
 @Controller('chat')
 export class ChatController {
@@ -91,6 +92,18 @@ export class ChatController {
       messageId,
       userId: request.user.userId,
       removeReactionDto,
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':conversationId/wizz')
+  async sendWizz(
+    @Param('conversationId') conversationId: string,
+    @Request() request: RequestWithUser,
+  ) {
+    return await this.chatService.sendWizz({
+      sendWizzDto: { conversationId },
+      userId: request.user.userId,
     });
   }
 }

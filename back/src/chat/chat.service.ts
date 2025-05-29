@@ -4,6 +4,7 @@ import { CreateConversationDto } from './dto/create-conversation.dto';
 import { SendChatDto } from './dto/send-chat.dto';
 import { AddReactionDto } from './dto/add-reaction.dto';
 import { RemoveReactionDto } from './dto/remove-reaction.dto';
+import { SendWizzDto } from './dto/send-wizz.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -477,6 +478,58 @@ export class ChatService {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
         message: error.message,
       };
+    }
+  }
+
+  async sendWizz({
+    sendWizzDto: { conversationId },
+    userId,
+  }: {
+    sendWizzDto: SendWizzDto;
+    userId: string;
+  }) {
+    try {
+      // Vérifier que l'utilisateur fait partie de la conversation
+      const conversation = await this.prisma.conversation.findFirst({
+        where: {
+          id: conversationId,
+          participants: {
+            some: {
+              id: userId,
+            },
+          },
+        },
+        include: {
+          participants: true,
+        },
+      });
+
+      if (!conversation) {
+        throw new Error('Conversation non trouvée ou accès non autorisé');
+      }
+
+      // Récupérer l'utilisateur qui envoie le wizz
+      const sender = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, username: true },
+      });
+
+      if (!sender) {
+        throw new Error('Utilisateur non trouvé');
+      }
+
+      // Émettre le wizz à tous les participants de la conversation
+      this.socketService.emitToConversation(conversationId, 'wizz-received', {
+        senderId: sender.id,
+        senderUsername: sender.username,
+        conversationId,
+        timestamp: new Date().toISOString(),
+      });
+
+      return { success: true, message: 'Wizz envoyé !' };
+    } catch (error) {
+      console.error("Erreur lors de l'envoi du wizz:", error);
+      throw error;
     }
   }
 }

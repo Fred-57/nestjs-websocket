@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import { Message } from "@/lib/api";
+import { useAuth } from "./useAuth";
 
 interface SocketContextType {
   socket: Socket | null;
@@ -24,10 +24,28 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const { token } = useAuth();
 
   useEffect(() => {
+    // Nettoyer la connexion précédente
+    if (socket) {
+      socket.disconnect();
+      setSocket(null);
+      setIsConnected(false);
+    }
+
+    // Ne pas se connecter si pas de token
+    if (!token) {
+      return;
+    }
+
     const socketInstance = io(
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
+      {
+        auth: {
+          token: token,
+        },
+      }
     );
 
     socketInstance.on("connect", () => {
@@ -44,8 +62,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
     return () => {
       socketInstance.disconnect();
+      setIsConnected(false);
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]); // Seulement le token comme dépendance
 
   const value = {
     socket,

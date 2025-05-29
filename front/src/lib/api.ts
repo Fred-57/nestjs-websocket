@@ -84,6 +84,13 @@ export interface RemoveReactionData {
   emoji: string;
 }
 
+export interface WizzData {
+  senderId: string;
+  senderUsername: string;
+  conversationId: string;
+  timestamp: string;
+}
+
 // Services API
 export const authApi = {
   register: async (data: RegisterData) => {
@@ -154,6 +161,11 @@ export const chatApi = {
       `/chat/${conversationId}/messages/${messageId}/reactions`,
       { data }
     );
+    return response.data;
+  },
+
+  sendWizz: async (conversationId: string) => {
+    const response = await api.post(`/chat/${conversationId}/wizz`);
     return response.data;
   },
 };

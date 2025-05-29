@@ -3,7 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSocket } from "@/hooks/useSocket";
-import { chatApi, userApi, Conversation, User, Message } from "@/lib/api";
+import {
+  chatApi,
+  userApi,
+  Conversation,
+  User,
+  Message,
+  WizzData,
+} from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,6 +25,9 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import { UserSettings } from "@/components/ui/user-settings";
 import { ReactionButton } from "@/components/ui/reaction-picker";
 import { MessageReactions } from "@/components/ui/message-reactions";
+import { WizzButton } from "@/components/ui/wizz-button";
+import { WizzEffect } from "@/components/ui/wizz-effect";
+import { WizzNotification } from "@/components/ui/wizz-notification";
 import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
@@ -36,6 +46,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+
+  // États pour le wizz
+  const [isWizzing, setIsWizzing] = useState(false);
+  const [wizzNotification, setWizzNotification] = useState<{
+    show: boolean;
+    senderUsername: string;
+  }>({ show: false, senderUsername: "" });
 
   const loadConversations = useCallback(async () => {
     try {
@@ -86,12 +103,33 @@ export default function DashboardPage() {
         }
       );
 
+      socket.on("wizz-received", (data: WizzData) => {
+        if (
+          selectedConversation &&
+          data.conversationId === selectedConversation.id &&
+          data.senderId !== user?.id
+        ) {
+          // Afficher la notification
+          setWizzNotification({
+            show: true,
+            senderUsername: data.senderUsername,
+          });
+
+          // Déclencher l'animation de vibration
+          setIsWizzing(true);
+          setTimeout(() => {
+            setIsWizzing(false);
+          }, 2000);
+        }
+      });
+
       return () => {
         socket.off("send-chat-update");
         socket.off("reaction-update");
+        socket.off("wizz-received");
       };
     }
-  }, [socket, selectedConversation]);
+  }, [socket, selectedConversation, user?.id]);
 
   const loadConversation = async (conversationId: string) => {
     try {
@@ -168,6 +206,16 @@ export default function DashboardPage() {
       // Les réactions seront mises à jour via Socket.IO
     } catch (error) {
       console.error("Error removing reaction:", error);
+    }
+  };
+
+  const sendWizz = async () => {
+    if (!selectedConversation) return;
+
+    try {
+      await chatApi.sendWizz(selectedConversation.id);
+    } catch (error) {
+      console.error("Error sending wizz:", error);
     }
   };
 
@@ -307,7 +355,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Chat area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col relative">
         {selectedConversation ? (
           <>
             {/* Chat header */}
@@ -317,68 +365,79 @@ export default function DashboardPage() {
               </h2>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    message.sender.id === user?.id
-                      ? "justify-end"
-                      : "justify-start"
-                  }`}
-                >
-                  <div className="max-w-xs lg:max-w-md group">
-                    <div className="flex items-end space-x-2">
-                      <div
-                        className={`px-4 py-2 rounded-lg text-white shadow-sm relative`}
-                        style={{
-                          backgroundColor:
-                            message.sender.messageColor || "#3B82F6",
-                        }}
-                      >
-                        <p className="text-sm">{message.content}</p>
-                        <p className="text-xs mt-1 opacity-80">
-                          {message.sender.username}
-                        </p>
+            {/* Notification Wizz */}
+            <WizzNotification
+              senderUsername={wizzNotification.senderUsername}
+              show={wizzNotification.show}
+              onComplete={() =>
+                setWizzNotification({ show: false, senderUsername: "" })
+              }
+            />
 
-                        {/* Bouton pour ajouter une réaction */}
+            {/* Messages */}
+            <WizzEffect isWizzing={isWizzing}>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${
+                      message.sender.id === user?.id
+                        ? "justify-end"
+                        : "justify-start"
+                    }`}
+                  >
+                    <div className="max-w-xs lg:max-w-md group">
+                      <div className="flex items-end space-x-2">
                         <div
-                          className={`absolute ${
-                            message.sender.id === user?.id
-                              ? "left-0 -ml-8"
-                              : "right-0 -mr-8"
-                          } top-1/2 transform -translate-y-1/2`}
+                          className={`px-4 py-2 rounded-lg text-white shadow-sm relative`}
+                          style={{
+                            backgroundColor:
+                              message.sender.messageColor || "#3B82F6",
+                          }}
                         >
-                          <ReactionButton
-                            onReactionSelect={(emoji) =>
-                              addReaction(message.id, emoji)
-                            }
-                            position={
-                              message.sender.id === user?.id ? "top" : "top"
-                            }
-                          />
+                          <p className="text-sm">{message.content}</p>
+                          <p className="text-xs mt-1 opacity-80">
+                            {message.sender.username}
+                          </p>
+
+                          {/* Bouton pour ajouter une réaction */}
+                          <div
+                            className={`absolute ${
+                              message.sender.id === user?.id
+                                ? "left-0 -ml-8"
+                                : "right-0 -mr-8"
+                            } top-1/2 transform -translate-y-1/2`}
+                          >
+                            <ReactionButton
+                              onReactionSelect={(emoji) =>
+                                addReaction(message.id, emoji)
+                              }
+                              position={
+                                message.sender.id === user?.id ? "top" : "top"
+                              }
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Affichage des réactions */}
-                    {message.reactions && message.reactions.length > 0 && (
-                      <MessageReactions
-                        reactions={message.reactions}
-                        currentUserId={user?.id || ""}
-                        onAddReaction={(emoji) =>
-                          addReaction(message.id, emoji)
-                        }
-                        onRemoveReaction={(emoji) =>
-                          removeReaction(message.id, emoji)
-                        }
-                      />
-                    )}
+                      {/* Affichage des réactions */}
+                      {message.reactions && message.reactions.length > 0 && (
+                        <MessageReactions
+                          reactions={message.reactions}
+                          currentUserId={user?.id || ""}
+                          onAddReaction={(emoji) =>
+                            addReaction(message.id, emoji)
+                          }
+                          onRemoveReaction={(emoji) =>
+                            removeReaction(message.id, emoji)
+                          }
+                        />
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </WizzEffect>
 
             {/* Message input */}
             <div className="p-4 border-t border-gray-200 bg-white">
@@ -390,6 +449,7 @@ export default function DashboardPage() {
                   onKeyPress={(e) => e.key === "Enter" && sendMessage()}
                   className="flex-1"
                 />
+                <WizzButton onWizzSend={sendWizz} />
                 <Button onClick={sendMessage} disabled={!newMessage.trim()}>
                   <Send className="h-4 w-4" />
                 </Button>
