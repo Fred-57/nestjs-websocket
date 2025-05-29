@@ -10,7 +10,8 @@ interface AuthContextType {
   register: (
     email: string,
     username: string,
-    password: string
+    password: string,
+    messageColor?: string
   ) => Promise<void>;
   logout: () => void;
   loading: boolean;
@@ -77,10 +78,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const register = async (
     email: string,
     username: string,
-    password: string
+    password: string,
+    messageColor?: string
   ) => {
     try {
-      const response = await authApi.register({ email, username, password });
+      const response = await authApi.register({
+        email,
+        username,
+        password,
+        messageColor,
+      });
       const { access_token } = response.user;
 
       localStorage.setItem("token", access_token);

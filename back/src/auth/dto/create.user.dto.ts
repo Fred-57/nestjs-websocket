@@ -1,4 +1,11 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  IsOptional,
+  Matches,
+} from 'class-validator';
 
 export class CreateUserDto {
   @IsEmail()
@@ -14,4 +21,11 @@ export class CreateUserDto {
   @IsNotEmpty()
   @MinLength(3)
   password: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, {
+    message: 'messageColor must be a valid hex color',
+  })
+  messageColor?: string;
 }

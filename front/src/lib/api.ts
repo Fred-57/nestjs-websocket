@@ -23,6 +23,7 @@ export interface User {
   id: string;
   email: string;
   username: string;
+  messageColor?: string;
   isOnline?: boolean;
   createdAt?: Date;
 }
@@ -36,6 +37,7 @@ export interface RegisterData {
   email: string;
   username: string;
   password: string;
+  messageColor?: string;
 }
 
 export interface Conversation {
@@ -51,6 +53,7 @@ export interface Message {
   sender: {
     id: string;
     username: string;
+    messageColor?: string;
   };
 }
 
@@ -80,7 +83,12 @@ export const authApi = {
   },
 
   getCurrentUser: async () => {
-    const response = await api.get("/auth");
+    const response = await api.get("/auth/profile");
+    return response.data;
+  },
+
+  updateProfile: async (data: Partial<RegisterData>) => {
+    const response = await api.patch("/auth/profile", data);
     return response.data;
   },
 };

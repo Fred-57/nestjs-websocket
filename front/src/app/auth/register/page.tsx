@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
@@ -12,6 +13,7 @@ export default function RegisterPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [messageColor, setMessageColor] = useState("#3B82F6");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -30,12 +32,14 @@ export default function RegisterPage() {
     }
 
     try {
-      await register(email, username, password);
+      await register(email, username, password, messageColor);
       router.push("/dashboard");
-    } catch (error: any) {
-      setError(
-        error?.response?.data?.message || "Erreur lors de l'inscription"
-      );
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Erreur lors de l&apos;inscription";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -126,6 +130,13 @@ export default function RegisterPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirmez votre mot de passe"
+              />
+            </div>
+            <div>
+              <ColorPicker
+                value={messageColor}
+                onChange={setMessageColor}
+                label="Couleur de vos messages"
               />
             </div>
           </div>

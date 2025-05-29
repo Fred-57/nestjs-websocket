@@ -6,8 +6,16 @@ import { useSocket } from "@/hooks/useSocket";
 import { chatApi, userApi, Conversation, User, Message } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MessageSquare, Plus, Send, Users, LogOut } from "lucide-react";
+import {
+  MessageSquare,
+  Plus,
+  Send,
+  Users,
+  LogOut,
+  Settings,
+} from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading";
+import { UserSettings } from "@/components/ui/user-settings";
 import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
@@ -25,6 +33,7 @@ export default function DashboardPage() {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -152,6 +161,13 @@ export default function DashboardPage() {
             >
               <Plus className="h-4 w-4" />
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowSettings(true)}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
             <Button size="sm" variant="ghost" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
             </Button>
@@ -273,14 +289,13 @@ export default function DashboardPage() {
                   }`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.sender.id === user?.id
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-900"
-                    }`}
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg text-white shadow-sm`}
+                    style={{
+                      backgroundColor: message.sender.messageColor || "#3B82F6",
+                    }}
                   >
                     <p className="text-sm">{message.content}</p>
-                    <p className="text-xs mt-1 opacity-70">
+                    <p className="text-xs mt-1 opacity-80">
                       {message.sender.username}
                     </p>
                   </div>
@@ -313,6 +328,9 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* User Settings Modal */}
+      {showSettings && <UserSettings onClose={() => setShowSettings(false)} />}
     </div>
   );
 }

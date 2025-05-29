@@ -21,7 +21,7 @@ export class AuthService {
   ) {}
 
   async register(createUserDto: CreateUserDto) {
-    const { email, username, password } = createUserDto;
+    const { email, username, password, messageColor } = createUserDto;
 
     // Vérifie si l'utilisateur existe déjà
     const existingUser = await this.prisma.user.findFirst({
@@ -43,6 +43,7 @@ export class AuthService {
         email,
         username,
         password: hashedPassword,
+        messageColor: messageColor || '#3B82F6', // Couleur par défaut
       },
     });
 
@@ -106,8 +107,33 @@ export class AuthService {
       id: user.id,
       email: user.email,
       username: user.username,
+      messageColor: user.messageColor,
       isOnline: user.isOnline,
       createdAt: user.createdAt,
+    };
+  }
+
+  async updateProfile(
+    userId: string,
+    updateData: Partial<CreateUserDto>,
+  ): Promise<UserResponseDto> {
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(updateData.messageColor && {
+          messageColor: updateData.messageColor,
+        }),
+        ...(updateData.username && { username: updateData.username }),
+      },
+    });
+
+    return {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      username: updatedUser.username,
+      messageColor: updatedUser.messageColor,
+      isOnline: updatedUser.isOnline,
+      createdAt: updatedUser.createdAt,
     };
   }
 

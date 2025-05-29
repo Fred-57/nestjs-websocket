@@ -122,6 +122,7 @@ export class ChatService {
                 select: {
                   id: true,
                   username: true,
+                  messageColor: true,
                 },
               },
             },
@@ -166,6 +167,7 @@ export class ChatService {
               select: {
                 id: true,
                 username: true,
+                messageColor: true,
               },
             },
             messages: {
@@ -176,6 +178,7 @@ export class ChatService {
                   select: {
                     id: true,
                     username: true,
+                    messageColor: true,
                   },
                 },
               },
@@ -225,6 +228,7 @@ export class ChatService {
           select: {
             id: true,
             username: true,
+            messageColor: true,
           },
         },
         messages: {
@@ -235,6 +239,7 @@ export class ChatService {
               select: {
                 id: true,
                 username: true,
+                messageColor: true,
               },
             },
           },
