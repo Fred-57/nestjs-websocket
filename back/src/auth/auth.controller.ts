@@ -1,16 +1,28 @@
-import { Controller, Post, Body, ValidationPipe } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  ValidationPipe,
+  UseGuards,
+  Get,
+  Request,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { CreateUserDto, LoginUserDto } from './dto/user.dto';
-import { UserResponseDto } from './dto/user.response.dto';
+import { CreateUserDto } from './dto/create.user.dto';
+import { LoginUserDto } from './dto/log-user.dto';
+import { RequestWithUser } from './jwt.strategy';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { UserService } from 'src/user/user.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private userService: UserService,
+  ) {}
 
   @Post('register')
-  async register(
-    @Body(ValidationPipe) createUserDto: CreateUserDto,
-  ): Promise<{ message: string; user: UserResponseDto }> {
+  async register(@Body(ValidationPipe) createUserDto: CreateUserDto) {
     const user = await this.authService.register(createUserDto);
     return {
       message: 'Utilisateur créé avec succès',
@@ -19,14 +31,20 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(
-    @Body(ValidationPipe) loginUserDto: LoginUserDto,
-  ): Promise<{ message: string; user: UserResponseDto }> {
+  async login(@Body(ValidationPipe) loginUserDto: LoginUserDto) {
     const user = await this.authService.login(loginUserDto);
     return {
       message: 'Connexion réussie',
       user,
     };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  async getAuthenticatedUser(@Request() request: RequestWithUser) {
+    return await this.userService.getUser({
+      userId: request.user.userId,
+    });
   }
 
   @Post('logout')

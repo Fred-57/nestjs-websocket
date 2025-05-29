@@ -4,17 +4,23 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateUserDto, LoginUserDto } from './dto/user.dto';
+import { CreateUserDto } from './dto/create.user.dto';
 import { UserResponseDto } from './dto/user.response.dto';
 import * as bcrypt from 'bcryptjs';
+import { LoginUserDto } from './dto/log-user.dto';
+import { UserPayload } from './jwt.strategy';
+import { JwtService } from '@nestjs/jwt';
 
 const SALT_OR_ROUNDS = 10;
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly jwtService: JwtService,
+  ) {}
 
-  async register(createUserDto: CreateUserDto): Promise<UserResponseDto> {
+  async register(createUserDto: CreateUserDto) {
     const { email, username, password } = createUserDto;
 
     // Vérifie si l'utilisateur existe déjà
@@ -32,7 +38,7 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(password, SALT_OR_ROUNDS);
 
-    const user = await this.prisma.user.create({
+    const createdUser = await this.prisma.user.create({
       data: {
         email,
         username,
@@ -40,31 +46,30 @@ export class AuthService {
       },
     });
 
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      isOnline: user.isOnline,
-      createdAt: user.createdAt,
-    };
+    return this.authenticateUser({
+      userId: createdUser.id,
+    });
   }
 
-  async login(loginUserDto: LoginUserDto): Promise<UserResponseDto> {
-    const { username, password } = loginUserDto;
+  async login(loginUserDto: LoginUserDto) {
+    const { email, password } = loginUserDto;
 
     // Trouver l'utilisateur
-    const user = await this.prisma.user.findUnique({
-      where: { username },
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
     });
 
-    if (!user) {
+    if (!existingUser) {
       throw new UnauthorizedException(
         "Nom d'utilisateur ou mot de passe incorrect",
       );
     }
 
     // Vérifier le mot de passe
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      password,
+      existingUser.password,
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException(
@@ -74,17 +79,13 @@ export class AuthService {
 
     // Mettre à jour le statut en ligne
     await this.prisma.user.update({
-      where: { id: user.id },
+      where: { id: existingUser.id },
       data: { isOnline: true },
     });
 
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      isOnline: true,
-      createdAt: user.createdAt,
-    };
+    return this.authenticateUser({
+      userId: existingUser.id,
+    });
   }
 
   async logout(userId: string): Promise<void> {
@@ -107,6 +108,13 @@ export class AuthService {
       username: user.username,
       isOnline: user.isOnline,
       createdAt: user.createdAt,
+    };
+  }
+
+  private authenticateUser({ userId }: UserPayload) {
+    const payload: UserPayload = { userId };
+    return {
+      access_token: this.jwtService.sign(payload),
     };
   }
 }
