@@ -55,6 +55,17 @@ export interface Message {
     username: string;
     messageColor?: string;
   };
+  reactions?: Reaction[];
+}
+
+export interface Reaction {
+  id: string;
+  emoji: string;
+  user: {
+    id: string;
+    username: string;
+  };
+  createdAt: Date;
 }
 
 export interface CreateConversationData {
@@ -63,6 +74,14 @@ export interface CreateConversationData {
 
 export interface SendMessageData {
   content: string;
+}
+
+export interface AddReactionData {
+  emoji: string;
+}
+
+export interface RemoveReactionData {
+  emoji: string;
 }
 
 // Services API
@@ -111,6 +130,30 @@ export const chatApi = {
 
   sendMessage: async (conversationId: string, data: SendMessageData) => {
     const response = await api.post(`/chat/${conversationId}`, data);
+    return response.data;
+  },
+
+  addReaction: async (
+    conversationId: string,
+    messageId: string,
+    data: AddReactionData
+  ) => {
+    const response = await api.post(
+      `/chat/${conversationId}/messages/${messageId}/reactions`,
+      data
+    );
+    return response.data;
+  },
+
+  removeReaction: async (
+    conversationId: string,
+    messageId: string,
+    data: RemoveReactionData
+  ) => {
+    const response = await api.delete(
+      `/chat/${conversationId}/messages/${messageId}/reactions`,
+      { data }
+    );
     return response.data;
   },
 };

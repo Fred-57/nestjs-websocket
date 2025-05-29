@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSocket } from "@/hooks/useSocket";
 import { chatApi, userApi, Conversation, User, Message } from "@/lib/api";
@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { UserSettings } from "@/components/ui/user-settings";
+import { ReactionButton } from "@/components/ui/reaction-picker";
+import { MessageReactions } from "@/components/ui/message-reactions";
 import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
@@ -35,6 +37,24 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [showSettings, setShowSettings] = useState(false);
 
+  const loadConversations = useCallback(async () => {
+    try {
+      const data = await chatApi.getConversations();
+      setConversations(data.conversations || []);
+    } catch (error) {
+      console.error("Error loading conversations:", error);
+    }
+  }, []);
+
+  const loadUsers = useCallback(async () => {
+    try {
+      const data = await userApi.getUsers();
+      setUsers(data.filter((u: User) => u.id !== user?.id));
+    } catch (error) {
+      console.error("Error loading users:", error);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (!user) {
       router.push("/auth/login");
@@ -43,7 +63,7 @@ export default function DashboardPage() {
 
     loadConversations();
     loadUsers();
-  }, [user, router]);
+  }, [user, router, loadConversations, loadUsers]);
 
   useEffect(() => {
     if (socket) {
@@ -53,29 +73,25 @@ export default function DashboardPage() {
         }
       });
 
+      socket.on(
+        "reaction-update",
+        (data: { messageId: string; message: Message }) => {
+          if (selectedConversation) {
+            setMessages((prevMessages) =>
+              prevMessages.map((msg) =>
+                msg.id === data.messageId ? data.message : msg
+              )
+            );
+          }
+        }
+      );
+
       return () => {
         socket.off("send-chat-update");
+        socket.off("reaction-update");
       };
     }
   }, [socket, selectedConversation]);
-
-  const loadConversations = async () => {
-    try {
-      const data = await chatApi.getConversations();
-      setConversations(data.conversations || []);
-    } catch (error) {
-      console.error("Error loading conversations:", error);
-    }
-  };
-
-  const loadUsers = async () => {
-    try {
-      const data = await userApi.getUsers();
-      setUsers(data.filter((u: User) => u.id !== user?.id));
-    } catch (error) {
-      console.error("Error loading users:", error);
-    }
-  };
 
   const loadConversation = async (conversationId: string) => {
     try {
@@ -128,6 +144,30 @@ export default function DashboardPage() {
       // Les messages seront mis à jour via Socket.IO
     } catch (error) {
       console.error("Error sending message:", error);
+    }
+  };
+
+  const addReaction = async (messageId: string, emoji: string) => {
+    if (!selectedConversation) return;
+
+    try {
+      await chatApi.addReaction(selectedConversation.id, messageId, { emoji });
+      // Les réactions seront mises à jour via Socket.IO
+    } catch (error) {
+      console.error("Error adding reaction:", error);
+    }
+  };
+
+  const removeReaction = async (messageId: string, emoji: string) => {
+    if (!selectedConversation) return;
+
+    try {
+      await chatApi.removeReaction(selectedConversation.id, messageId, {
+        emoji,
+      });
+      // Les réactions seront mises à jour via Socket.IO
+    } catch (error) {
+      console.error("Error removing reaction:", error);
     }
   };
 
@@ -288,16 +328,53 @@ export default function DashboardPage() {
                       : "justify-start"
                   }`}
                 >
-                  <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg text-white shadow-sm`}
-                    style={{
-                      backgroundColor: message.sender.messageColor || "#3B82F6",
-                    }}
-                  >
-                    <p className="text-sm">{message.content}</p>
-                    <p className="text-xs mt-1 opacity-80">
-                      {message.sender.username}
-                    </p>
+                  <div className="max-w-xs lg:max-w-md group">
+                    <div className="flex items-end space-x-2">
+                      <div
+                        className={`px-4 py-2 rounded-lg text-white shadow-sm relative`}
+                        style={{
+                          backgroundColor:
+                            message.sender.messageColor || "#3B82F6",
+                        }}
+                      >
+                        <p className="text-sm">{message.content}</p>
+                        <p className="text-xs mt-1 opacity-80">
+                          {message.sender.username}
+                        </p>
+
+                        {/* Bouton pour ajouter une réaction */}
+                        <div
+                          className={`absolute ${
+                            message.sender.id === user?.id
+                              ? "left-0 -ml-8"
+                              : "right-0 -mr-8"
+                          } top-1/2 transform -translate-y-1/2`}
+                        >
+                          <ReactionButton
+                            onReactionSelect={(emoji) =>
+                              addReaction(message.id, emoji)
+                            }
+                            position={
+                              message.sender.id === user?.id ? "top" : "top"
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Affichage des réactions */}
+                    {message.reactions && message.reactions.length > 0 && (
+                      <MessageReactions
+                        reactions={message.reactions}
+                        currentUserId={user?.id || ""}
+                        onAddReaction={(emoji) =>
+                          addReaction(message.id, emoji)
+                        }
+                        onRemoveReaction={(emoji) =>
+                          removeReaction(message.id, emoji)
+                        }
+                      />
+                    )}
                   </div>
                 </div>
               ))}
