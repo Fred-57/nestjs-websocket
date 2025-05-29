@@ -8,7 +8,13 @@ import {
 import { Server, Socket } from 'socket.io';
 import { SocketService } from 'src/socket/socket.service';
 
-@WebSocketGateway(8001)
+@WebSocketGateway({
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+})
 export class ChatGateway {
   @WebSocketServer()
   private readonly server: Server;
