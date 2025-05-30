@@ -1,0 +1,22 @@
+{
+  "name": "chat-app",
+  "version": "1.0.0",
+  "description": "Chat app NestJs and NextJs",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\"",
+    "dev:back": "cd back && npm run start:dev",
+    "dev:front": "cd front && npm run dev",
+    "build": "npm run build:back && npm run build:front",
+    "build:back": "cd back && npm run build",
+    "build:front": "cd front && npm run build",
+    "start": "concurrently \"npm run start:back\" \"npm run start:front\"",
+    "start:back": "cd back && npm run start:prod",
+    "start:front": "cd front && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0"
+  },
+  "author": "",
+  "license": "ISC"
+}
