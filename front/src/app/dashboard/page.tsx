@@ -103,6 +103,18 @@ export default function DashboardPage() {
         }
       );
 
+      // Nouvel événement pour mettre à jour la liste des conversations
+      socket.on(
+        "conversation-list-update",
+        (data: { conversationId: string; participants: string[] }) => {
+          // Vérifier si l'utilisateur actuel fait partie des participants
+          if (user?.id && data.participants.includes(user.id)) {
+            // Recharger la liste des conversations
+            loadConversations();
+          }
+        }
+      );
+
       socket.on("wizz-received", (data: WizzData) => {
         if (
           selectedConversation &&
@@ -126,10 +138,11 @@ export default function DashboardPage() {
       return () => {
         socket.off("send-chat-update");
         socket.off("reaction-update");
+        socket.off("conversation-list-update");
         socket.off("wizz-received");
       };
     }
-  }, [socket, selectedConversation, user?.id]);
+  }, [socket, selectedConversation, user?.id, loadConversations]);
 
   const loadConversation = async (conversationId: string) => {
     try {

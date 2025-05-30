@@ -56,6 +56,12 @@ export class ChatService {
         },
       });
 
+      // Émettre un événement pour mettre à jour la liste des conversations des deux utilisateurs
+      this.socketService.server.emit('conversation-list-update', {
+        conversationId: createdConversation.id,
+        participants: [existingUser.id, existingRecipient.id],
+      });
+
       return {
         error: false,
         conversationId: createdConversation.id,
@@ -150,6 +156,29 @@ export class ChatService {
       this.socketService.server
         // .to(updatedConversation.id)
         .emit('send-chat-update', updatedConversation.messages);
+
+      // Émettre un événement pour mettre à jour la liste des conversations
+      // Récupérer tous les participants de la conversation
+      const conversationWithParticipants =
+        await this.prisma.conversation.findUnique({
+          where: { id: conversationId },
+          select: {
+            participants: {
+              select: { id: true },
+            },
+          },
+        });
+
+      // Émettre l'événement à tous les participants pour qu'ils rafraîchissent leur liste de conversations
+      if (conversationWithParticipants) {
+        this.socketService.server.emit('conversation-list-update', {
+          conversationId: conversationId,
+          participants: conversationWithParticipants.participants.map(
+            (p) => p.id,
+          ),
+        });
+      }
+
       console.log(updatedConversation);
 
       return {
