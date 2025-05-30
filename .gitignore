@@ -3,8 +3,5 @@
 # dependencies
 /node_modules
 
-# env files (can opt-in for committing if needed)
-.env*
-
 # editor
 .vscode/settings.json
