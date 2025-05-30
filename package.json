@@ -4,6 +4,10 @@
   "description": "Chat app NestJs and NextJs",
   "main": "index.js",
   "scripts": {
+    "install": "npm run install:back && npm run install:front",
+    "install:back": "cd back && npm install",
+    "install:front": "cd front && npm install",
+    "migrate": "cd back && npx prisma migrate dev",
     "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\"",
     "dev:back": "cd back && npm run start:dev",
     "dev:front": "cd front && npm run dev",
